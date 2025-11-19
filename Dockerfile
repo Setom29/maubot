@@ -3,59 +3,60 @@ FROM node:24 AS frontend-builder
 COPY ./maubot/management/frontend /frontend
 RUN cd /frontend && yarn --prod && yarn build
 
-FROM alpine:3.22
 
-RUN apk add --no-cache \
-        python3 py3-pip py3-setuptools py3-wheel \
-        ca-certificates \
-        su-exec \
-        yq \
-        py3-aiohttp \
-        py3-aiodns \
-        py3-brotli \
-        py3-attrs \
-        py3-bcrypt \
-        py3-cffi \
-        py3-ruamel.yaml \
-        py3-jinja2 \
-        py3-click \
-        py3-packaging \
-        py3-markdown \
-        py3-alembic \
-        py3-cssselect \
-        py3-commonmark \
-        py3-pygments \
-        py3-tz \
-        py3-regex \
-        py3-wcwidth \
-        # encryption
-        py3-cffi \
-        py3-olm \
-        py3-pycryptodome \
-        py3-unpaddedbase64 \
-        py3-future \
-        # plugin deps
-        py3-pillow \
-        py3-magic \
-        py3-feedparser \
-        py3-dateutil \
-        py3-lxml \
-        py3-semver
-# TODO remove pillow, magic, feedparser, lxml, gitlab and semver when maubot supports installing dependencies
+# ---------------------------------------------
+# Python image instead of Alpine
+# ---------------------------------------------
+FROM python:3.12-slim AS runtime
 
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    su-exec \
+    yq \
+    curl \
+    git \
+    build-essential \
+    libffi-dev \
+    libssl-dev \
+    libxml2-dev \
+    libxslt1-dev \
+    libjpeg-dev \
+    zlib1g-dev \
+    libmagic1 \
+    libolm3 \
+    libolm-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# ---------------------------------------------
+# Install Python deps
+# ---------------------------------------------
 COPY requirements.txt /opt/maubot/requirements.txt
 COPY optional-requirements.txt /opt/maubot/optional-requirements.txt
-WORKDIR /opt/maubot
-RUN apk add --virtual .build-deps python3-dev build-base git \
-    && pip3 install --break-system-packages -r requirements.txt -r optional-requirements.txt \
-        dateparser langdetect python-gitlab pyquery tzlocal \
-    && apk del .build-deps
-# TODO also remove dateparser, langdetect and pyquery when maubot supports installing dependencies
 
+WORKDIR /opt/maubot
+
+# Install build deps temporarily
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        gcc \
+        python3-dev \
+    && pip install --no-cache-dir --break-system-packages \
+        -r requirements.txt \
+        -r optional-requirements.txt \
+        dateparser langdetect python-gitlab pyquery tzlocal \
+    && apt-get purge -y gcc python3-dev \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
+
+# ---------------------------------------------
+# Copy application
+# ---------------------------------------------
 COPY . /opt/maubot
 RUN cp maubot/example-config.yaml .
 COPY ./docker/mbc.sh /usr/local/bin/mbc
 COPY --from=frontend-builder /frontend/build /opt/maubot/frontend
+
 ENV UID=1337 GID=1337 XDG_CONFIG_HOME=/data
 VOLUME /data
 
