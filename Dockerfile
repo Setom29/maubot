@@ -13,9 +13,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
-    su-exec \
+    gosu \
     yq \
-    curl \
     git \
     build-essential \
     libffi-dev \
@@ -28,7 +27,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libolm3 \
     libolm-dev \
     && rm -rf /var/lib/apt/lists/*
-
 # ---------------------------------------------
 # Install Python deps
 # ---------------------------------------------
