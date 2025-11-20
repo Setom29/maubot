@@ -11,10 +11,14 @@ FROM python:3.12-slim AS runtime
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Install correct yq (Go version)
+RUN wget -q https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 \
+    -O /usr/bin/yq && \
+    chmod +x /usr/bin/yq
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     gosu \
-    yq \
     git \
     build-essential \
     libffi-dev \
