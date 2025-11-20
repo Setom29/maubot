@@ -26,6 +26,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libmagic1 \
         libolm3 \
         libolm-dev \
+        tesseract-ocr \
+        tesseract-ocr-all \
+        ghostscript \
     && curl -L https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 \
         -o /usr/bin/yq \
     && chmod +x /usr/bin/yq \
